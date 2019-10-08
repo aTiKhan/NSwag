@@ -2,7 +2,7 @@
 // <copyright file="SwaggerToCSharpControllerGeneratorSettings.cs" company="NSwag">
 //     Copyright (c) Rico Suter. All rights reserved.
 // </copyright>
-// <license>https://github.com/NSwag/NSwag/blob/master/LICENSE.md</license>
+// <license>https://github.com/RicoSuter/NSwag/blob/master/LICENSE.md</license>
 // <author>Rico Suter, mail@rsuter.com</author>
 //-----------------------------------------------------------------------
 
@@ -60,5 +60,8 @@ namespace NSwag.CodeGeneration.CSharp
 
         /// <summary>Gets or sets a value indicating whether ASP.Net Core (2.1) ActionResult type is used (default: false).</summary>
         public bool UseActionResultType { get; set; }
+
+        /// <summary>Gets or sets the base path on which the API is served, which is relative to the Host.</summary>
+        public string BasePath { get; set; }
     }
 }

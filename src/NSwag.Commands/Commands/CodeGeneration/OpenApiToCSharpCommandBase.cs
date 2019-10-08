@@ -2,7 +2,7 @@
 // <copyright file="SwaggerToCSharpCommand.cs" company="NSwag">
 //     Copyright (c) Rico Suter. All rights reserved.
 // </copyright>
-// <license>https://github.com/NSwag/NSwag/blob/master/LICENSE.md</license>
+// <license>https://github.com/RicoSuter/NSwag/blob/master/LICENSE.md</license>
 // <author>Rico Suter, mail@rsuter.com</author>
 //-----------------------------------------------------------------------
 
@@ -161,6 +161,13 @@ namespace NSwag.Commands.CodeGeneration
             set { Settings.CSharpGeneratorSettings.JsonConverters = value; }
         }
 
+        [Argument(Name = "AnyType", IsRequired = false, Description = "The any .NET type (default: 'object').")]
+        public string AnyType
+        {
+            get { return Settings.CSharpGeneratorSettings.AnyType; }
+            set { Settings.CSharpGeneratorSettings.AnyType = value; }
+        }
+
         [Argument(Name = "DateTimeType", IsRequired = false, Description = "The date time .NET type (default: 'DateTimeOffset').")]
         public string DateTimeType
         {
@@ -290,12 +297,12 @@ namespace NSwag.Commands.CodeGeneration
             set { Settings.CSharpGeneratorSettings.JsonSerializerSettingsTransformationMethod = value; }
         }
 
-        //[Argument(Name = "InlineNamedArrays", Description = "Inline named arrays (default: false).", IsRequired = false)]
-        //public bool InlineNamedArrays
-        //{
-        //    get { return Settings.CSharpGeneratorSettings.InlineNamedArrays; }
-        //    set { Settings.CSharpGeneratorSettings.InlineNamedArrays = value; }
-        //}
+        [Argument(Name = "InlineNamedArrays", Description = "Inline named arrays (default: false).", IsRequired = false)]
+        public bool InlineNamedArrays
+        {
+            get { return Settings.CSharpGeneratorSettings.InlineNamedArrays; }
+            set { Settings.CSharpGeneratorSettings.InlineNamedArrays = value; }
+        }
 
         [Argument(Name = "InlineNamedDictionaries", Description = "Inline named dictionaries (default: false).", IsRequired = false)]
         public bool InlineNamedDictionaries
@@ -311,11 +318,26 @@ namespace NSwag.Commands.CodeGeneration
             set { Settings.CSharpGeneratorSettings.InlineNamedTuples = value; }
         }
 
+        [Argument(Name = "InlineNamedAny", Description = "Inline named any types (default: false).", IsRequired = false)]
+        public bool InlineNamedAny
+        {
+            get { return Settings.CSharpGeneratorSettings.InlineNamedAny; }
+            set { Settings.CSharpGeneratorSettings.InlineNamedAny = value; }
+        }
+
         [Argument(Name = "GenerateDtoTypes", IsRequired = false, Description = "Specifies whether to generate DTO classes.")]
         public bool GenerateDtoTypes
         {
             get { return Settings.GenerateDtoTypes; }
             set { Settings.GenerateDtoTypes = value; }
+        }
+
+        [Argument(Name = "GenerateOptionalPropertiesAsNullable", IsRequired = false, Description = "Specifies whether optional schema properties " +
+            "(not required) are generated as nullable properties (default: false).")]
+        public bool GenerateOptionalPropertiesAsNullable
+        {
+            get { return Settings.CSharpGeneratorSettings.GenerateOptionalPropertiesAsNullable; }
+            set { Settings.CSharpGeneratorSettings.GenerateOptionalPropertiesAsNullable = value; }
         }
     }
 }

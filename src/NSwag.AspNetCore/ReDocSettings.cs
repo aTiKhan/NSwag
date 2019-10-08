@@ -2,7 +2,7 @@
 // <copyright file="ReDocSettings.cs" company="NSwag">
 //     Copyright (c) Rico Suter. All rights reserved.
 // </copyright>
-// <license>https://github.com/NSwag/NSwag/blob/master/LICENSE.md</license>
+// <license>https://github.com/RicoSuter/NSwag/blob/master/LICENSE.md</license>
 // <author>Rico Suter, mail@rsuter.com</author>
 //-----------------------------------------------------------------------
 
@@ -36,8 +36,8 @@ namespace NSwag.AspNetCore
 #endif
         {
             html = html.Replace("{AdditionalSettings}", GenerateAdditionalSettings(AdditionalSettings));
-            html = html.Replace("{CustomStyle}", GetCustomStyleHtml());
-            html = html.Replace("{CustomScript}", GetCustomScriptHtml());
+            html = html.Replace("{CustomStyle}", GetCustomStyleHtml(request));
+            html = html.Replace("{CustomScript}", GetCustomScriptHtml(request));
             return html;
         }
     }

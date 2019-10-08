@@ -2,7 +2,7 @@
 // <copyright file="SwaggerUiOwinSettings.cs" company="NSwag">
 //     Copyright (c) Rico Suter. All rights reserved.
 // </copyright>
-// <license>https://github.com/NSwag/NSwag/blob/master/LICENSE.md</license>
+// <license>https://github.com/RicoSuter/NSwag/blob/master/LICENSE.md</license>
 // <author>Rico Suter, mail@rsuter.com</author>
 //-----------------------------------------------------------------------
 
@@ -131,8 +131,8 @@ namespace NSwag.AspNetCore
                 "window.location.origin + \"" + TransformToExternalPath(Path, request) + "/oauth2-redirect.html\"" :
                 "\"" + ServerUrl + TransformToExternalPath(Path, request) + "/oauth2-redirect.html\"");
 
-            html = html.Replace("{CustomStyle}", GetCustomStyleHtml());
-            html = html.Replace("{CustomScript}", GetCustomScriptHtml());
+            html = html.Replace("{CustomStyle}", GetCustomStyleHtml(request));
+            html = html.Replace("{CustomScript}", GetCustomScriptHtml(request));
 
             return html;
         }
@@ -157,7 +157,7 @@ namespace NSwag.AspNetCore
             Name = name;
             Url = url;
         }
-        
+
         /// <summary>Gets the route URL.</summary>
         [JsonProperty("url")]
         public string Url { get; internal set; }

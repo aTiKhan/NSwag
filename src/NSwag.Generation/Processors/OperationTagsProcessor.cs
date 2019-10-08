@@ -2,7 +2,7 @@
 // <copyright file="OperationTagsProcessor.cs" company="NSwag">
 //     Copyright (c) Rico Suter. All rights reserved.
 // </copyright>
-// <license>https://github.com/NSwag/NSwag/blob/master/LICENSE.md</license>
+// <license>https://github.com/RicoSuter/NSwag/blob/master/LICENSE.md</license>
 // <author>Rico Suter, mail@rsuter.com</author>
 //-----------------------------------------------------------------------
 
@@ -24,6 +24,14 @@ namespace NSwag.Generation.Processors
         {
             ProcessSwaggerTagsAttribute(context.Document, context.OperationDescription, context.MethodInfo);
             ProcessSwaggerTagAttributes(context.Document, context.OperationDescription, context.MethodInfo);
+
+            if (!context.OperationDescription.Operation.Tags.Any())
+            {
+                var typeInfo = context.ControllerType.GetTypeInfo();
+
+                ProcessControllerSwaggerTagsAttribute(context.OperationDescription, typeInfo);
+                ProcessControllerSwaggerTagAttributes(context.OperationDescription, typeInfo);
+            }
 
             if (!context.OperationDescription.Operation.Tags.Any())
             {
@@ -92,6 +100,38 @@ namespace NSwag.Generation.Processors
                             document.Tags.Add(new OpenApiTag { Name = tag });
                         }
                     }
+                }
+            }
+        }
+
+        private void ProcessControllerSwaggerTagsAttribute(OpenApiOperationDescription operationDescription, TypeInfo typeInfo)
+        {
+            dynamic tagsAttribute = typeInfo
+                .GetCustomAttributes()
+                .FirstAssignableToTypeNameOrDefault("OpenApiTagsAttribute", TypeNameStyle.Name);
+
+            if (tagsAttribute != null)
+            {
+                var tags = ((string[])tagsAttribute.Tags).ToList();
+                foreach (var tag in tags)
+                {
+                    if (operationDescription.Operation.Tags.All(t => t != tag))
+                    {
+                        operationDescription.Operation.Tags.Add(tag);
+                    }
+                }
+            }
+        }
+
+        private void ProcessControllerSwaggerTagAttributes(OpenApiOperationDescription operationDescription, TypeInfo typeInfo)
+        {
+            foreach (var tagAttribute in typeInfo.GetCustomAttributes()
+                .GetAssignableToTypeName("OpenApiTagAttribute", TypeNameStyle.Name)
+                .Select(a => (dynamic)a))
+            {
+                if (operationDescription.Operation.Tags.All(t => t != tagAttribute.Name))
+                {
+                    operationDescription.Operation.Tags.Add(tagAttribute.Name);
                 }
             }
         }

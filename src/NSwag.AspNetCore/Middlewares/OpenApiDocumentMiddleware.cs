@@ -2,7 +2,7 @@
 // <copyright file="SwaggerMiddleware.cs" company="NSwag">
 //     Copyright (c) Rico Suter. All rights reserved.
 // </copyright>
-// <license>https://github.com/NSwag/NSwag/blob/master/LICENSE.md</license>
+// <license>https://github.com/RicoSuter/NSwag/blob/master/LICENSE.md</license>
 // <author>Rico Suter, mail@rsuter.com</author>
 //-----------------------------------------------------------------------
 
@@ -128,9 +128,11 @@ namespace NSwag.AspNetCore.Middlewares
         {
             var document = await _documentProvider.GenerateAsync(_documentName);
 
-            document.Host = context.Request.Host.Value ?? "";
-            document.Schemes.Add(context.Request.Scheme == "http" ? OpenApiSchema.Http : OpenApiSchema.Https);
-            document.BasePath = context.Request.PathBase.Value ?? "";
+            document.Servers.Clear();
+            document.Servers.Add(new OpenApiServer
+            {
+                Url = context.Request.GetServerUrl()
+            });
 
             _settings.PostProcess?.Invoke(document, context.Request);
 

@@ -2,7 +2,7 @@
 // <copyright file="SwaggerToCSharpControllerCommand.cs" company="NSwag">
 //     Copyright (c) Rico Suter. All rights reserved.
 // </copyright>
-// <license>https://github.com/NSwag/NSwag/blob/master/LICENSE.md</license>
+// <license>https://github.com/RicoSuter/NSwag/blob/master/LICENSE.md</license>
 // <author>Rico Suter, mail@rsuter.com</author>
 //-----------------------------------------------------------------------
 
@@ -76,6 +76,13 @@ namespace NSwag.Commands.CodeGeneration
         {
             get { return Settings.RouteNamingStrategy; }
             set { Settings.RouteNamingStrategy = value; }
+        }
+
+        [Argument(Name = "BasePath", Description = "The Base path on which the API is served, which is relative to the Host", IsRequired = false)]
+        public string BasePath
+        {
+            get { return Settings.BasePath; }
+            set { Settings.BasePath = value; }
         }
 
         public override async Task<object> RunAsync(CommandLineProcessor processor, IConsoleHost host)

@@ -2,7 +2,7 @@
 // <copyright file="SwaggerToTypeScriptClientCommand.cs" company="NSwag">
 //     Copyright (c) Rico Suter. All rights reserved.
 // </copyright>
-// <license>https://github.com/NSwag/NSwag/blob/master/LICENSE.md</license>
+// <license>https://github.com/RicoSuter/NSwag/blob/master/LICENSE.md</license>
 // <author>Rico Suter, mail@rsuter.com</author>
 //-----------------------------------------------------------------------
 
@@ -350,6 +350,13 @@ namespace NSwag.Commands.CodeGeneration
         {
             get { return Settings.TypeScriptGeneratorSettings.InlineNamedDictionaries; }
             set { Settings.TypeScriptGeneratorSettings.InlineNamedDictionaries = value; }
+        }
+
+        [Argument(Name = "InlineNamedAny", Description = "Inline named any types (default: false).", IsRequired = false)]
+        public bool InlineNamedAny
+        {
+            get { return Settings.TypeScriptGeneratorSettings.InlineNamedAny; }
+            set { Settings.TypeScriptGeneratorSettings.InlineNamedAny = value; }
         }
 
         public override async Task<object> RunAsync(CommandLineProcessor processor, IConsoleHost host)
