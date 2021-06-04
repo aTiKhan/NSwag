@@ -59,6 +59,13 @@ namespace NSwag.Commands.CodeGeneration
             set { Settings.GenerateClientInterfaces = value; }
         }
 
+        [Argument(Name = "ClientBaseInterface", IsRequired = false, Description = "Base interface for client interfaces (empty for no client base interface).")]
+        public string ClientBaseInterface
+        {
+            get { return Settings.ClientBaseInterface; }
+            set { Settings.ClientBaseInterface = value; }
+        }
+
         [Argument(Name = "InjectHttpClient", IsRequired = false, Description = "Specifies whether an HttpClient instance is injected (default: true).")]
         public bool InjectHttpClient
         {
@@ -147,6 +154,14 @@ namespace NSwag.Commands.CodeGeneration
             set { Settings.GenerateSyncMethods = value; }
         }
 
+        [Argument(Name = "GeneratePrepareRequestAndProcessResponseAsAsyncMethods", IsRequired = false,
+                  Description = "Specifies whether to generate PrepareRequest and ProcessResponse methods as asynchronous methods (if true, both must be defined in the base class or in the partial class, default: false).")]
+        public bool GeneratePrepareRequestAndProcessResponseAsAsyncMethods
+        {
+            get { return Settings.GeneratePrepareRequestAndProcessResponseAsAsyncMethods; }
+            set { Settings.GeneratePrepareRequestAndProcessResponseAsAsyncMethods = value; }
+        }
+
         [Argument(Name = nameof(ExposeJsonSerializerSettings), IsRequired = false,
             Description = "Specifies whether to expose the JsonSerializerSettings property (default: false).")]
         public bool ExposeJsonSerializerSettings
@@ -188,12 +203,28 @@ namespace NSwag.Commands.CodeGeneration
             set { Settings.ParameterDateTimeFormat = value; }
         }
 
+        [Argument(Name = "ParameterDateFormat", IsRequired = false,
+          Description = "Specifies the format for Date type method parameters (default: yyyy-MM-dd).")]
+        public string ParameterDateFormat
+        {
+            get { return Settings.ParameterDateFormat; }
+            set { Settings.ParameterDateFormat = value; }
+        }
+
         [Argument(Name = "GenerateUpdateJsonSerializerSettingsMethod", IsRequired = false,
             Description = "Generate the UpdateJsonSerializerSettings method (must be implemented in the base class otherwise, default: true).")]
         public bool GenerateUpdateJsonSerializerSettingsMethod
         {
             get { return Settings.GenerateUpdateJsonSerializerSettingsMethod; }
             set { Settings.GenerateUpdateJsonSerializerSettingsMethod = value; }
+        }
+
+        [Argument(Name = "UseRequestAndResponseSerializationSettings", IsRequired = false,
+            Description = "Generate different request and response serialization settings (default: false).")]
+        public bool UseRequestAndResponseSerializationSettings
+        {
+            get { return Settings.UseRequestAndResponseSerializationSettings; }
+            set { Settings.UseRequestAndResponseSerializationSettings = value; }
         }
 
         [Argument(Name = "SerializeTypeInformation", IsRequired = false,
@@ -223,9 +254,9 @@ namespace NSwag.Commands.CodeGeneration
             return result;
         }
 
-        public async Task<Dictionary<string, string>> RunAsync()
+        public Task<Dictionary<string, string>> RunAsync()
         {
-            return await Task.Run(async () =>
+            return Task.Run(async () =>
             {
                 var document = await GetInputSwaggerDocument().ConfigureAwait(false);
                 var clientGenerator = new CSharpClientGenerator(document, Settings);
@@ -239,6 +270,8 @@ namespace NSwag.Commands.CodeGeneration
                 }
                 else
                 {
+                    // when generating single file allow caching
+                    Settings.OutputFilePath = OutputFilePath;
                     return new Dictionary<string, string>
                     {
                         { OutputFilePath ?? "Full", clientGenerator.GenerateFile(ClientGeneratorOutputType.Full) }

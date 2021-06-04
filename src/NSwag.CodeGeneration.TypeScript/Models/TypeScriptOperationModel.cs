@@ -165,9 +165,16 @@ namespace NSwag.CodeGeneration.TypeScript.Models
             if (parameter.IsBinaryBodyParameter)
             {
                 return "Blob";
+                // TODO: Use HasBinaryBodyWithMultipleMimeTypes => how to provide content type in TS?
+                //return parameter.HasBinaryBodyWithMultipleMimeTypes ? "FileParameter" : "Blob";
             }
 
             var schema = parameter.ActualSchema;
+            if (schema.Type == JsonObjectType.Array && schema.Item.IsBinary)
+            {
+                return "FileParameter[]";
+            }
+
             if (schema.IsBinary)
             {
                 if (parameter.CollectionFormat == OpenApiParameterCollectionFormat.Multi && !schema.Type.HasFlag(JsonObjectType.Array))
@@ -176,6 +183,23 @@ namespace NSwag.CodeGeneration.TypeScript.Models
                 }
 
                 return "FileParameter";
+            }
+
+            if (_settings.TypeScriptGeneratorSettings.UseLeafType && schema.ActualDiscriminatorObject != null)
+            {
+                var types = schema.ActualDiscriminatorObject.Mapping
+                    .Select(x => new OpenApiParameter
+                    {
+                        Name = parameter.Name,
+                        Kind = parameter.Kind,
+                        IsRequired = parameter.IsRequired,
+                        IsNullableRaw = parameter.IsNullableRaw,
+                        Description = parameter.Description,
+                        Schema = x.Value
+                    })
+                    .Select(ResolveParameterType);
+
+                return string.Join(" | ", types);
             }
 
             return base.ResolveParameterType(parameter);

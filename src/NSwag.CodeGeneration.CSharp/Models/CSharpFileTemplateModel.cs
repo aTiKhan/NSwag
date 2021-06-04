@@ -48,7 +48,13 @@ namespace NSwag.CodeGeneration.CSharp.Models
             _clientCode = clientTypes.Concatenate();
 
             Classes = dtoTypes.Concatenate();
+            SourceSha = _settings.ChecksumCacheEnabled ? _document.GetChecksum() : "";
         }
+
+        /// <summary>
+        /// Gets the checksum for the document that was used to produce the file.
+        /// </summary>
+        public string SourceSha { get; }
 
         /// <summary>Gets the namespace.</summary>
         public string Namespace => _settings.CSharpGeneratorSettings.Namespace ?? string.Empty;
@@ -57,6 +63,9 @@ namespace NSwag.CodeGeneration.CSharp.Models
         public string[] NamespaceUsages => (_outputType == ClientGeneratorOutputType.Contracts ?
             _settings.AdditionalContractNamespaceUsages?.Where(n => n != null).ToArray() :
             _settings.AdditionalNamespaceUsages?.Where(n => n != null).ToArray()) ?? new string[] { };
+
+        /// <summary>Gets a value indicating whether the C#8 nullable reference types are enabled for this file.</summary>
+        public bool GenerateNullableReferenceTypes => _settings.CSharpGeneratorSettings.GenerateNullableReferenceTypes;
 
         /// <summary>Gets a value indicating whether to generate contract code.</summary>
         public bool GenerateContracts =>
@@ -78,7 +87,9 @@ namespace NSwag.CodeGeneration.CSharp.Models
         public string Classes { get; }
 
         /// <summary>Gets a value indicating whether the generated code requires a JSON exception converter.</summary>
-        public bool RequiresJsonExceptionConverter => JsonExceptionTypes.Any();
+        public bool RequiresJsonExceptionConverter =>
+            _settings.CSharpGeneratorSettings.JsonLibrary == CSharpJsonLibrary.NewtonsoftJson &&
+            JsonExceptionTypes.Any(); // TODO(system.text.json): How to serialize exceptions with STJ?
 
         /// <summary>Gets the exception model class.</summary>
         public string ExceptionModelClass => JsonExceptionTypes.FirstOrDefault(t => t != "Exception") ?? "Exception";
@@ -90,7 +101,12 @@ namespace NSwag.CodeGeneration.CSharp.Models
         /// <summary>Gets a value indicating whether the generated code requires the FileParameter type.</summary>
         public bool RequiresFileParameterType =>
             _settings.CSharpGeneratorSettings.ExcludedTypeNames?.Contains("FileParameter") != true &&
-            _document.Operations.Any(o => o.Operation.ActualParameters.Any(p => p.ActualTypeSchema.IsBinary));
+            (_document.Operations.Any(o => o.Operation.ActualParameters.Any(p => p.ActualTypeSchema.IsBinary)) ||
+             _document.Operations.Any(o => o.Operation?.RequestBody?.Content?.Any(c => c.Value.Schema?.IsBinary == true ||
+                                                                                       c.Value.Schema?.ActualProperties.Any(p => p.Value.IsBinary ||
+                                                                                                                                 p.Value.Item?.IsBinary == true ||
+                                                                                                                                 p.Value.Items.Any(i => i.IsBinary)
+                                                                                                                                 ) == true) == true));
 
         /// <summary>Gets a value indicating whether [generate file response class].</summary>
         public bool GenerateFileResponseClass =>

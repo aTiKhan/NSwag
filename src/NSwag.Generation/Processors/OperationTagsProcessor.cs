@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Namotion.Reflection;
+using NSwag.Generation.Collections;
 using NSwag.Generation.Processors.Contexts;
 
 namespace NSwag.Generation.Processors
@@ -52,6 +53,25 @@ namespace NSwag.Generation.Processors
             }
 
             context.OperationDescription.Operation.Tags.Add(controllerName);
+            SetDescription(context, controllerName, context.ControllerType.GetXmlDocsSummary());
+        }
+
+        /// <summary>
+        /// Sets the description for the given controller on the document.
+        /// </summary>
+        /// <param name="context">The context.</param>
+        /// <param name="controllerName">The controller name.</param>
+        /// <param name="description">The description.</param>
+        protected void SetDescription(OperationProcessorContext context, string controllerName, string description)
+        {
+            if (!context.Settings.UseControllerSummaryAsTagDescription || string.IsNullOrEmpty(description))
+            {
+                return;
+            }
+
+            var documentTag = context.Document.Tags.SingleOrNew(tag => tag.Name == controllerName);
+            documentTag.Name = controllerName;
+            documentTag.Description = description;
         }
 
         private void ProcessSwaggerTagAttributes(OpenApiDocument document, OpenApiOperationDescription operationDescription, MethodInfo methodInfo)

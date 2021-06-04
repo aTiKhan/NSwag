@@ -21,6 +21,7 @@ using Namotion.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using NJsonSchema;
+using NJsonSchema.Generation;
 using NSwag.Generation.Processors;
 using NSwag.Generation.Processors.Contexts;
 
@@ -42,17 +43,20 @@ namespace NSwag.Generation.AspNetCore
         /// <summary>Generates the <see cref="OpenApiDocument"/> with services from the given service provider.</summary>
         /// <param name="serviceProvider">The service provider.</param>
         /// <returns>The document</returns>
-        public async Task<OpenApiDocument> GenerateAsync(object serviceProvider)
+        public Task<OpenApiDocument> GenerateAsync(object serviceProvider)
         {
             var typedServiceProvider = (IServiceProvider)serviceProvider;
 
             var mvcOptions = typedServiceProvider.GetRequiredService<IOptions<MvcOptions>>();
-            var settings = GetJsonSerializerSettings(typedServiceProvider) ?? GetSystemTextJsonSettings();
+            var settings =
+                mvcOptions.Value.OutputFormatters.Any(f => f.GetType().Name == "SystemTextJsonOutputFormatter") ?
+                    GetSystemTextJsonSettings(typedServiceProvider) :
+                    GetJsonSerializerSettings(typedServiceProvider) ?? GetSystemTextJsonSettings(typedServiceProvider);
 
             Settings.ApplySettings(settings, mvcOptions.Value);
 
             var apiDescriptionGroupCollectionProvider = typedServiceProvider.GetRequiredService<IApiDescriptionGroupCollectionProvider>();
-            return await GenerateAsync(apiDescriptionGroupCollectionProvider.ApiDescriptionGroups);
+            return GenerateAsync(apiDescriptionGroupCollectionProvider.ApiDescriptionGroups);
         }
 
         /// <summary>Loads the <see cref="GetJsonSerializerSettings"/> from the given service provider.</summary>
@@ -60,32 +64,45 @@ namespace NSwag.Generation.AspNetCore
         /// <returns>The settings.</returns>
         public static JsonSerializerSettings GetJsonSerializerSettings(IServiceProvider serviceProvider)
         {
-            dynamic options = null;
-            try
-            {
-#if NETCOREAPP3_0
-                options = new Func<dynamic>(() => serviceProvider?.GetRequiredService(typeof(IOptions<MvcNewtonsoftJsonOptions>)) as dynamic)();
-#else
-                options = new Func<dynamic>(() => serviceProvider?.GetRequiredService(typeof(IOptions<MvcJsonOptions>)) as dynamic)();
-#endif
-            }
-            catch
+            dynamic GetJsonOptionsWithReflection(IServiceProvider sp)
             {
                 try
                 {
                     // Try load ASP.NET Core 3 options
                     var optionsAssembly = Assembly.Load(new AssemblyName("Microsoft.AspNetCore.Mvc.NewtonsoftJson"));
                     var optionsType = typeof(IOptions<>).MakeGenericType(optionsAssembly.GetType("Microsoft.AspNetCore.Mvc.MvcNewtonsoftJsonOptions", true));
-                    options = serviceProvider?.GetService(optionsType) as dynamic;
+                    return (dynamic)sp?.GetService(optionsType);
                 }
                 catch
                 {
-                    // Newtonsoft.JSON not available, see GetSystemTextJsonSettings()
+                    // Newtonsoft.JSON not available, use GetSystemTextJsonSettings()
                     return null;
                 }
             }
 
-            return (JsonSerializerSettings)options?.Value?.SerializerSettings;
+#if NET5_0 || NETCOREAPP3_1
+            dynamic options = GetJsonOptionsWithReflection(serviceProvider);
+#else
+            dynamic options = null;
+            try
+            {
+                options = new Func<dynamic>(() => serviceProvider?.GetRequiredService(typeof(IOptions<MvcJsonOptions>)))();
+            }
+            catch
+            {
+                options = GetJsonOptionsWithReflection(serviceProvider);
+            }
+#endif
+
+            try
+            {
+                return (JsonSerializerSettings)options?.Value?.SerializerSettings;
+            }
+            catch
+            {
+                // Newtonsoft.JSON not available, use GetSystemTextJsonSettings()
+                return null;
+            }
         }
 
         /// <summary>Generates a Swagger specification for the given <see cref="ApiDescriptionGroupCollection"/>.</summary>
@@ -127,11 +144,31 @@ namespace NSwag.Generation.AspNetCore
 
         /// <summary>Gets the default serializer settings representing System.Text.Json.</summary>
         /// <returns>The settings.</returns>
-        public static JsonSerializerSettings GetSystemTextJsonSettings()
+        public static JsonSerializerSettings GetSystemTextJsonSettings(IServiceProvider serviceProvider)
         {
-            // If the ASP.NET Core website does not use Newtonsoft.JSON we need to provide a 
+            // If the ASP.NET Core website does not use Newtonsoft.JSON we need to provide a
             // contract resolver which reflects best the System.Text.Json behavior.
             // See https://github.com/RicoSuter/NSwag/issues/2243
+
+            if (serviceProvider != null)
+            {
+                try
+                {
+                    var optionsAssembly = Assembly.Load(new AssemblyName("Microsoft.AspNetCore.Mvc.Core"));
+                    var optionsType = typeof(IOptions<>).MakeGenericType(optionsAssembly.GetType("Microsoft.AspNetCore.Mvc.JsonOptions", true));
+
+                    var options = serviceProvider?.GetService(optionsType) as dynamic;
+                    var jsonOptions = (object)options?.Value?.JsonSerializerOptions;
+                    if (jsonOptions != null && jsonOptions.GetType().FullName == "System.Text.Json.JsonSerializerOptions")
+                    {
+                        return SystemTextJsonUtilities.ConvertJsonOptionsToNewtonsoftSettings(jsonOptions);
+                    }
+                }
+                catch
+                {
+                }
+            }
+
             return new JsonSerializerSettings
             {
                 ContractResolver = new CamelCasePropertyNamesContractResolver()
@@ -382,9 +419,23 @@ namespace NSwag.Generation.AspNetCore
             {
                 operationId = swaggerOperationAttribute.OperationId;
             }
+            else if (Settings.UseRouteNameAsOperationId && !string.IsNullOrEmpty(actionDescriptor.AttributeRouteInfo.Name))
+            {
+                operationId = actionDescriptor.AttributeRouteInfo.Name;
+            }
             else
             {
-                operationId = actionDescriptor.ControllerName + "_" + GetActionName(actionDescriptor.ActionName);
+                dynamic openApiControllerAttribute = actionDescriptor
+                    .ControllerTypeInfo?
+                    .GetCustomAttributes()?
+                    .FirstAssignableToTypeNameOrDefault("OpenApiControllerAttribute", TypeNameStyle.Name);
+
+                var controllerName =
+                    openApiControllerAttribute != null && !string.IsNullOrEmpty(openApiControllerAttribute.Name) ?
+                    openApiControllerAttribute.Name :
+                    actionDescriptor.ControllerName;
+
+                operationId = controllerName + "_" + GetActionName(actionDescriptor.ActionName);
             }
 
             var number = 1;

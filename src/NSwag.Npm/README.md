@@ -31,35 +31,23 @@ Show available commands:
 
 The full .NET Framework in x64 mode is preferred as execution environment. If you need to run the command line tool in x86 mode use
 
-	nswag run version /runtime:WinX86
+    nswag version /runtime:WinX86
 
 Add the switch `/runtime:NetCore*` to the command to execute one of the .NET Core binaries (automatically detects whether .NET Core 1.0 or 1.1 is installed):
 
-    nswag run version /runtime:NetCore
+    nswag version /runtime:NetCore
 
-To specify what .NET Core binaries to execute, either use
+To specify what .NET Core binaries to execute, either use (default)
 
-    nswag run version /runtime:NetCore10
-
-or
-
-    nswag run version /runtime:NetCore11
+    nswag version /runtime:NetCore21
 
 or
 
-    nswag run version /runtime:NetCore20
+    nswag version /runtime:NetCore31
 
 or
 
-    nswag run version /runtime:NetCore21
-
-or
-
-    nswag run version /runtime:NetCore22
-
-or
-
-    nswag run version /runtime:NetCore30
+    nswag version /runtime:Net50
 
 ## Development
 
@@ -74,7 +62,7 @@ To run the NodeJS binary locally:
 
 The JavaScript command line tool can be found here:
 
-    src/NSwag.Npm/bin/nswag.json
+    src/NSwag.Npm/bin/nswag.js
 
 To publish the package (login required):
 

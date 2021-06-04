@@ -81,6 +81,13 @@ namespace NSwag.Commands.CodeGeneration
             set { Settings.HttpClass = value; }
         }
 
+        [Argument(Name = "WithCredentials", IsRequired = false, Description = "The Angular HttpClient will send withCredentials: true in http requests (default: false).")]
+        public bool WithCredentials
+        {
+            get { return Settings.WithCredentials; }
+            set { Settings.WithCredentials = value; }
+        }
+
         [Argument(Name = "UseSingletonProvider", IsRequired = false, Description = "Specifies whether to use the Angular 6 Singleton Provider (Angular template only, default: false).")]
         public bool UseSingletonProvider
         {
@@ -102,7 +109,7 @@ namespace NSwag.Commands.CodeGeneration
             set { Settings.RxJsVersion = value; }
         }
 
-        [Argument(Name = "DateTimeType", IsRequired = false, Description = "The date time type ('Date', 'MomentJS', 'OffsetMomentJS', 'string').")]
+        [Argument(Name = "DateTimeType", IsRequired = false, Description = "The date time type ('Date', 'MomentJS', 'Luxon', 'DayJS', 'OffsetMomentJS', 'string').")]
         public TypeScriptDateTimeType DateTimeType
         {
             get { return Settings.TypeScriptGeneratorSettings.DateTimeType; }
@@ -257,6 +264,20 @@ namespace NSwag.Commands.CodeGeneration
             set { Settings.TypeScriptGeneratorSettings.TypeStyle = value; }
         }
 
+        [Argument(Name = "EnumStyle", IsRequired = false, Description = "The enum style (Enum or StringLiteral, default: Enum).")]
+        public TypeScriptEnumStyle EnumStyle
+        {
+            get { return Settings.TypeScriptGeneratorSettings.EnumStyle; }
+            set { Settings.TypeScriptGeneratorSettings.EnumStyle = value; }
+        }
+
+        [Argument(Name = "UseLeafType", IsRequired = false, Description = "Generate leaf types for an object with discriminator (default: false).")]
+        public bool UseLeafType
+        {
+            get { return Settings.TypeScriptGeneratorSettings.UseLeafType; }
+            set { Settings.TypeScriptGeneratorSettings.UseLeafType = value; }
+        }
+
         [Argument(Name = "ClassTypes", IsRequired = false, Description = "The type names which always generate plain TypeScript classes.")]
         public string[] ClassTypes
         {
@@ -345,6 +366,13 @@ namespace NSwag.Commands.CodeGeneration
             set { Settings.QueryNullValue = value; }
         }
 
+        [Argument(Name = "UseAbortSignal", IsRequired = false, Description = "Specifies whether to use the AbortSignal (Fetch/Aurelia template only, default: false).")]
+        public bool UseAbortSignal
+        {
+            get { return Settings.UseAbortSignal; }
+            set { Settings.UseAbortSignal = value; }
+        }
+
         [Argument(Name = "InlineNamedDictionaries", Description = "Inline named dictionaries (default: false).", IsRequired = false)]
         public bool InlineNamedDictionaries
         {
@@ -366,9 +394,9 @@ namespace NSwag.Commands.CodeGeneration
             return code;
         }
 
-        public async Task<string> RunAsync()
+        public Task<string> RunAsync()
         {
-            return await Task.Run(async () =>
+            return Task.Run(async () =>
             {
                 var additionalCode = ExtensionCode ?? string.Empty;
                 if (DynamicApis.FileExists(additionalCode))
@@ -376,6 +404,7 @@ namespace NSwag.Commands.CodeGeneration
                     additionalCode = DynamicApis.FileReadAllText(additionalCode);
                 }
 
+                Settings.OutputFilePath = OutputFilePath;
                 Settings.TypeScriptGeneratorSettings.ExtensionCode = additionalCode;
 
                 var document = await GetInputSwaggerDocument().ConfigureAwait(false);

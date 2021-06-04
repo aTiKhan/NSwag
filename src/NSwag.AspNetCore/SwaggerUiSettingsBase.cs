@@ -13,6 +13,7 @@ using NJsonSchema;
 using System.Globalization;
 using Newtonsoft.Json;
 using System.Linq;
+using System.Text;
 #if AspNetOwin
 using Microsoft.Owin;
 
@@ -41,13 +42,21 @@ namespace NSwag.AspNetCore
         /// <summary>Gets or sets the internal swagger UI route (must start with '/').</summary>
         public string Path { get; set; } = "/swagger";
 
+#pragma warning disable 618
         internal string ActualSwaggerUiPath => Path.Substring(MiddlewareBasePath?.Length ?? 0);
+#pragma warning restore 618
+
+        /// <summary>Gets or sets custom inline styling to inject into the index.html</summary>
+        public string CustomInlineStyles { get; set; }
 
         /// <summary>Gets or sets a URI to load a custom CSS Stylesheet into the index.html</summary>
         public string CustomStylesheetPath { get; set; }
 
         /// <summary>Gets or sets a URI to load a custom JavaScript file into the index.html.</summary>
         public string CustomJavaScriptPath { get; set; }
+
+        /// <summary>Gets or sets a flag that indicates to use or not type="module" in a custom script tag (default: false).</summary>
+        public bool UseModuleTypeForCustomJavaScript { get; set; }
 
         /// <summary>Gets or sets the external route base path (must start with '/', default: null = use SwaggerUiRoute).</summary>
 #if AspNetOwin
@@ -69,13 +78,19 @@ namespace NSwag.AspNetCore
         protected string GetCustomStyleHtml(HttpRequest request)
 #endif
         {
-            if (CustomStylesheetPath == null)
+            var html = new StringBuilder();
+
+            if (!string.IsNullOrEmpty(CustomStylesheetPath))
             {
-                return string.Empty;
+                var uriString = System.Net.WebUtility.HtmlEncode(TransformToExternalPath(CustomStylesheetPath, request));
+                html.AppendLine($"<link rel=\"stylesheet\" href=\"{uriString}\">");
+            }
+            else if (!string.IsNullOrEmpty(CustomInlineStyles))
+            {
+                html.AppendLine($"<style type=\"text/css\">{CustomInlineStyles}</style>");
             }
 
-            var uriString = System.Net.WebUtility.HtmlEncode(TransformToExternalPath(CustomStylesheetPath, request));
-            return $"<link rel=\"stylesheet\" href=\"{uriString}\">";
+            return html.ToString();
         }
 
         /// <summary>
@@ -92,8 +107,14 @@ namespace NSwag.AspNetCore
                 return string.Empty;
             }
 
+            var scriptType = string.Empty;
+            if (UseModuleTypeForCustomJavaScript)
+            {
+                scriptType = "type=\"module\"";
+            }
+
             var uriString = System.Net.WebUtility.HtmlEncode(TransformToExternalPath(CustomJavaScriptPath, request));
-            return $"<script src=\"{uriString}\"></script>";
+            return $"<script {scriptType} src=\"{uriString}\"></script>";
         }
 
         /// <summary>Generates the additional objects JavaScript code.</summary>

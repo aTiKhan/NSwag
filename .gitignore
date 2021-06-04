@@ -72,3 +72,7 @@ src/packages/**
 .editorconfig
 /samples/packages
 /src/NSwag.Console/Properties/launchSettings.json
+
+# Ignore files from JetBrainds Rider
+/src/.idea/
+_ReSharper.Caches/

@@ -91,10 +91,16 @@ namespace NSwag.CodeGeneration.TypeScript
         /// <summary>Gets or sets the name of the exception class (default 'ApiException').</summary>
         public string ExceptionClass { get; set; }
 
+        /// <summary>Gets or sets a value indicating whether to use the AbortSignal (Fetch/Aurelia template only, default: false).</summary>
+        public bool UseAbortSignal { get; set; } = false;
+
         // TODO: Angular specific => move
 
         /// <summary>Gets or sets the HTTP service class (applies only for the Angular template, default: HttpClient).</summary>
         public HttpClass HttpClass { get; set; } = HttpClass.HttpClient;
+
+        /// <summary>Gets or sets a value indicating whether to set the withCredentials flag.</summary>
+        public bool WithCredentials { get; set; } = false;
 
         /// <summary>Gets the RxJs version (Angular template only, default: 6.0).</summary>
         public decimal RxJsVersion { get; set; } = 6.0m;

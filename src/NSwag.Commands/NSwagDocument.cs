@@ -304,29 +304,17 @@ namespace NSwag.Commands
 #if NET461
 
 	        var runtime = Runtime != Runtime.Default ? Runtime : RuntimeUtilities.CurrentRuntime;
-            if (runtime == Runtime.NetCore10)
-            {
-                return "\"" + System.IO.Path.Combine(RootBinaryDirectory, "NetCore10/dotnet-nswag.dll") + "\" ";
-            }
-            else if (runtime == Runtime.NetCore11)
-            {
-                return "\"" + System.IO.Path.Combine(RootBinaryDirectory, "NetCore11/dotnet-nswag.dll") + "\" ";
-            }
-            else if (runtime == Runtime.NetCore20)
-            {
-                return "\"" + System.IO.Path.Combine(RootBinaryDirectory, "NetCore20/dotnet-nswag.dll") + "\" ";
-            }
-            else if (runtime == Runtime.NetCore21)
+            if (runtime == Runtime.NetCore21)
             {
                 return "\"" + System.IO.Path.Combine(RootBinaryDirectory, "NetCore21/dotnet-nswag.dll") + "\" ";
             }
-            else if (runtime == Runtime.NetCore22)
+            else if (runtime == Runtime.NetCore31)
             {
-                return "\"" + System.IO.Path.Combine(RootBinaryDirectory, "NetCore22/dotnet-nswag.dll") + "\" ";
+                return "\"" + System.IO.Path.Combine(RootBinaryDirectory, "NetCore31/dotnet-nswag.dll") + "\" ";
             }
-            else if (runtime == Runtime.NetCore30)
+            else if (runtime == Runtime.Net50)
             {
-                return "\"" + System.IO.Path.Combine(RootBinaryDirectory, "NetCore30/dotnet-nswag.dll") + "\" ";
+                return "\"" + System.IO.Path.Combine(RootBinaryDirectory, "Net50/dotnet-nswag.dll") + "\" ";
             }
             else
 #endif

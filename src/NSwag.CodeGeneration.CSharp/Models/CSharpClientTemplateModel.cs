@@ -83,6 +83,12 @@ namespace NSwag.CodeGeneration.CSharp.Models
         /// <summary>Gets a value indicating whether to generate client interfaces.</summary>
         public bool GenerateClientInterfaces => _settings.GenerateClientInterfaces;
 
+        /// <summary>Gets client base interface.</summary>
+        public string ClientBaseInterface => _settings.ClientBaseInterface;
+
+        /// <summary>Gets a value indicating whether client interface has a base interface.</summary>
+        public bool HasClientBaseInterface => !string.IsNullOrEmpty(ClientBaseInterface);
+
         /// <summary>Gets a value indicating whether the document has a BaseUrl specified.</summary>
         public bool HasBaseUrl => !string.IsNullOrEmpty(BaseUrl);
 
@@ -122,11 +128,17 @@ namespace NSwag.CodeGeneration.CSharp.Models
         /// <summary>Gets or sets the format for DateTime type method parameters.</summary>
         public string ParameterDateTimeFormat => _settings.ParameterDateTimeFormat;
 
+        /// <summary>Gets or sets the format for Date type method parameters.</summary>
+        public string ParameterDateFormat => _settings.ParameterDateFormat;
+
         /// <summary>Gets or sets a value indicating whether to expose the JsonSerializerSettings property.</summary>
         public bool ExposeJsonSerializerSettings => _settings.ExposeJsonSerializerSettings;
 
         /// <summary>Gets or sets a value indicating whether to generate the UpdateJsonSerializerSettings method.</summary>
         public bool GenerateUpdateJsonSerializerSettingsMethod => _settings.GenerateUpdateJsonSerializerSettingsMethod;
+
+        /// <summary>Gets or sets a value indicating whether to generate different request and response serialization settings (default: false).</summary>
+        public bool UseRequestAndResponseSerializationSettings => _settings.UseRequestAndResponseSerializationSettings;
 
         /// <summary>Gets or sets a value indicating whether to serialize the type information in a $type property (not recommended, also sets TypeNameHandling = Auto).</summary>
         public bool SerializeTypeInformation => _settings.SerializeTypeInformation;
@@ -134,31 +146,53 @@ namespace NSwag.CodeGeneration.CSharp.Models
         /// <summary>Gets or sets the null value used for query parameters which are null.</summary>
         public string QueryNullValue => _settings.QueryNullValue;
 
+        /// <summary>
+        /// Gets or sets a value indicating whether to create PrepareRequest and ProcessResponse as async methods, or as partial synchronous methods.
+        /// If value is set to true, PrepareRequestAsync and ProcessResponseAsync methods must be implemented as part of the client base class (if it has one) or as part of the partial client class.
+        /// If value is set to false, PrepareRequest and ProcessResponse methods will be partial methods, and implement them is optional.
+        /// </summary>
+        public bool GeneratePrepareRequestAndProcessResponseAsAsyncMethods => _settings.GeneratePrepareRequestAndProcessResponseAsAsyncMethods;
+
         /// <summary>Gets the JSON serializer parameter code.</summary>
         public string JsonSerializerParameterCode
         {
             get
             {
-                // TODO: Fix this in NJS (remove ", ", cleanup)
                 var parameterCode = CSharpJsonSerializerGenerator.GenerateJsonSerializerParameterCode(
                     _settings.CSharpGeneratorSettings, RequiresJsonExceptionConverter ? new[] { "JsonExceptionConverter" } : null);
 
-                if (string.IsNullOrEmpty(parameterCode))
+                if (!parameterCode.Contains("new Newtonsoft.Json.JsonSerializerSettings"))
                 {
-                    parameterCode = "new Newtonsoft.Json.JsonSerializerSettings()";
-                }
-                else if(!parameterCode.Contains("new Newtonsoft.Json.JsonSerializerSettings"))
-                {
-                    parameterCode = "new Newtonsoft.Json.JsonSerializerSettings { Converters = " + parameterCode.Substring(2) + " }";
-                }
-                else
-                {
-                    parameterCode = parameterCode.Substring(2);
+                    parameterCode = _settings.CSharpGeneratorSettings.JsonLibrary == CSharpJsonLibrary.NewtonsoftJson ?
+                        "new Newtonsoft.Json.JsonSerializerSettings { Converters = " + parameterCode + " }" :
+                        parameterCode;
                 }
 
                 return parameterCode;
             }
         }
+
+        /// <summary>Gets the JSON converters array code.</summary>
+        public string JsonConvertersArrayCode
+        {
+            get
+            {
+                return CSharpJsonSerializerGenerator.GenerateJsonConvertersArrayCode(
+                    _settings.CSharpGeneratorSettings, RequiresJsonExceptionConverter ? new[] { "JsonExceptionConverter" } : null);
+            }
+        }
+
+        /// <summary>Gets the Title.</summary>
+        public string Title => _document.Info.Title;
+
+        /// <summary>Gets the Description.</summary>
+        public string Description => _document.Info.Description;
+
+        /// <summary>Gets the API version.</summary>
+        public string Version => _document.Info.Version;
+
+        /// <summary>Gets the extension data.</summary>
+        public IDictionary<string, object> ExtensionData => _document.ExtensionData;
 
         private bool RequiresJsonExceptionConverter => _settings.CSharpGeneratorSettings.ExcludedTypeNames?.Contains("JsonExceptionConverter") != true &&
             _document.Operations.Any(o => o.Operation.ActualResponses.Any(r => r.Value.Schema?.InheritsSchema(_exceptionSchema) == true));

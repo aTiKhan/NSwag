@@ -25,7 +25,7 @@ using NSwag.Generation;
 using NJsonSchema.Generation;
 using Namotion.Reflection;
 
-#if NETCOREAPP || NETSTANDARD
+#if NET5_0 || NETCOREAPP || NETSTANDARD
 using System.Runtime.Loader;
 #endif
 
@@ -60,6 +60,9 @@ namespace NSwag.Commands.Generation.AspNetCore
 
         [Argument(Name = nameof(NoBuild), IsRequired = false, Description = "Don't build the project. Only use this when the build is up-to-date.")]
         public bool NoBuild { get; set; }
+
+        [Argument(Name = nameof(MSBuildOutputPath), IsRequired = false, Description = "The MSBuild output path")]
+        public string MSBuildOutputPath { get; set; }
 
         [Argument(Name = nameof(Verbose), IsRequired = false, Description = "Print verbose output.")]
         public bool Verbose { get; set; } = true;
@@ -107,6 +110,7 @@ namespace NSwag.Commands.Generation.AspNetCore
                     Configuration,
                     Runtime,
                     NoBuild,
+                    MSBuildOutputPath,
                     verboseHost).ConfigureAwait(false);
 
                 if (!File.Exists(Path.Combine(projectMetadata.OutputPath, projectMetadata.TargetFileName)))
@@ -168,14 +172,15 @@ namespace NSwag.Commands.Generation.AspNetCore
                         cleanupFiles.Add(copiedAppConfig);
                     }
                 }
-#elif NETCOREAPP || NETSTANDARD
+#elif NET5_0 || NETCOREAPP || NETSTANDARD
                 var toolDirectory = AppContext.BaseDirectory;
                 if (!Directory.Exists(toolDirectory))
                 {
                     toolDirectory = Path.GetDirectoryName(typeof(AspNetCoreToSwaggerCommand).GetTypeInfo().Assembly.Location);
                 }
 
-                if (projectMetadata.TargetFrameworkIdentifier == ".NETCoreApp")
+                if (projectMetadata.TargetFrameworkIdentifier == ".NETCoreApp" ||
+                    projectMetadata.TargetFrameworkIdentifier == "net5.0")
                 {
                     executable = "dotnet";
                     args.Add("exec");
@@ -187,10 +192,18 @@ namespace NSwag.Commands.Generation.AspNetCore
 
                     var binaryName = LauncherBinaryName + ".dll";
                     var executorBinary = Path.Combine(toolDirectory, binaryName);
+                   
+                    if (!File.Exists(executorBinary))
+                    {
+                        binaryName = LauncherBinaryName + ".exe";
+                        executorBinary = Path.Combine(toolDirectory, binaryName);
+                    }
+
                     if (!File.Exists(executorBinary))
                     {
                         throw new InvalidOperationException($"Unable to locate {binaryName} in {toolDirectory}.");
                     }
+
                     args.Add(executorBinary);
                 }
 #endif
@@ -224,7 +237,7 @@ namespace NSwag.Commands.Generation.AspNetCore
 
                     var documentJson = File.ReadAllText(outputFile);
                     var document = await OpenApiDocument.FromJsonAsync(documentJson, null, OutputType, ReferenceResolverFactory).ConfigureAwait(false);
-                    await this.TryWriteDocumentOutputAsync(host, () => document).ConfigureAwait(false);
+                    await this.TryWriteDocumentOutputAsync(host, NewLineBehavior, () => document).ConfigureAwait(false);
                     return document;
                 }
                 finally

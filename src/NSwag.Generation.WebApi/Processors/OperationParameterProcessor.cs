@@ -121,29 +121,37 @@ namespace NSwag.Generation.WebApi.Processors
                                 var parameterBindingAttribute = contextualParameter.ContextAttributes.FirstAssignableToTypeNameOrDefault("ParameterBindingAttribute", TypeNameStyle.Name);
                                 if (parameterBindingAttribute != null && fromBodyAttribute == null && fromUriAttribute == null && !_settings.IsAspNetCore)
                                 {
-                                    // Try to find a [WillReadBody] attribute on either the action parameter or the bindingAttribute's class
-                                    var willReadBodyAttribute = contextualParameter.ContextAttributes.Concat(parameterBindingAttribute.GetType().GetTypeInfo().GetCustomAttributes())
-                                        .FirstAssignableToTypeNameOrDefault("WillReadBodyAttribute", TypeNameStyle.Name);
-
-                                    if (willReadBodyAttribute == null)
+                                    // If binding attribute is defined in GET method context, it cannot be body parameter and path and form attributes were checked earlier
+                                    if (context.OperationDescription.Method == OpenApiOperationMethod.Get)
                                     {
-                                        operationParameter = AddBodyParameter(context, bodyParameterName, contextualParameter);
-                                    }
+                                        operationParameter = AddPrimitiveParameter(uriParameterName, context, contextualParameter);
+                                    } 
                                     else
                                     {
-                                        // Try to get a boolean property value from the attribute which explicity tells us whether to read from the body
-                                        // If no such property exists, then default to false since WebAPI's HttpParameterBinding.WillReadBody defaults to false
-                                        var willReadBody = willReadBodyAttribute.TryGetPropertyValue("WillReadBody", true);
-                                        if (willReadBody)
+                                        // Try to find a [WillReadBody] attribute on either the action parameter or the bindingAttribute's class
+                                        var willReadBodyAttribute = contextualParameter.ContextAttributes.Concat(parameterBindingAttribute.GetType().GetTypeInfo().GetCustomAttributes())
+                                            .FirstAssignableToTypeNameOrDefault("WillReadBodyAttribute", TypeNameStyle.Name);
+
+                                        if (willReadBodyAttribute == null)
                                         {
                                             operationParameter = AddBodyParameter(context, bodyParameterName, contextualParameter);
                                         }
                                         else
                                         {
-                                            // If we are not reading from the body, then treat this as a primitive.
-                                            // This may seem odd, but it allows for primitive -> custom complex-type bindings which are very common
-                                            // In this case, the API author should use a TypeMapper to define the parameter
-                                            operationParameter = AddPrimitiveParameter(uriParameterName, context, contextualParameter);
+                                            // Try to get a boolean property value from the attribute which explicity tells us whether to read from the body
+                                            // If no such property exists, then default to false since WebAPI's HttpParameterBinding.WillReadBody defaults to false
+                                            var willReadBody = willReadBodyAttribute.TryGetPropertyValue("WillReadBody", true);
+                                            if (willReadBody)
+                                            {
+                                                operationParameter = AddBodyParameter(context, bodyParameterName, contextualParameter);
+                                            }
+                                            else
+                                            {
+                                                // If we are not reading from the body, then treat this as a primitive.
+                                                // This may seem odd, but it allows for primitive -> custom complex-type bindings which are very common
+                                                // In this case, the API author should use a TypeMapper to define the parameter
+                                                operationParameter = AddPrimitiveParameter(uriParameterName, context, contextualParameter);
+                                            }
                                         }
                                     }
                                 }
@@ -182,6 +190,11 @@ namespace NSwag.Generation.WebApi.Processors
                         operationParameter.IsNullableRaw = null;
                     }
 
+                    if (operationParameter.Name != contextualParameter.ParameterInfo.Name)
+                    {
+                        operationParameter.OriginalName = contextualParameter.ParameterInfo.Name;
+                    }
+                    
                     ((Dictionary<ParameterInfo, OpenApiParameter>)context.Parameters)[contextualParameter.ParameterInfo] = operationParameter;
                 }
             }
@@ -200,12 +213,60 @@ namespace NSwag.Generation.WebApi.Processors
                 }
             }
 
+            ApplyOpenApiBodyParameterAttribute(context.OperationDescription, context.MethodInfo);
             RemoveUnusedPathParameters(context.OperationDescription, httpPath);
             UpdateConsumedTypes(context.OperationDescription);
+            UpdateNullableRawOperationParameters(context.OperationDescription, _settings.SchemaType);
 
             EnsureSingleBodyParameter(context.OperationDescription);
 
             return true;
+        }
+
+
+        private void ApplyOpenApiBodyParameterAttribute(OpenApiOperationDescription operationDescription, MethodInfo methodInfo)
+        {
+            dynamic bodyParameterAttribute = methodInfo.GetCustomAttributes()
+                .FirstAssignableToTypeNameOrDefault("OpenApiBodyParameterAttribute", TypeNameStyle.Name);
+
+            if (bodyParameterAttribute != null)
+            {
+                if (operationDescription.Operation.RequestBody == null)
+                {
+                    operationDescription.Operation.RequestBody = new OpenApiRequestBody();
+                }
+
+                var mimeTypes = ObjectExtensions.HasProperty(bodyParameterAttribute, "MimeType") ?
+                    new string[] { bodyParameterAttribute.MimeType } : bodyParameterAttribute.MimeTypes;
+
+                foreach (var mimeType in mimeTypes)
+                {
+                    operationDescription.Operation.RequestBody.Content[mimeType] = new OpenApiMediaType
+                    {
+                        Schema = mimeType == "application/json" ? JsonSchema.CreateAnySchema() : new JsonSchema
+                        {
+                            Type = _settings.SchemaType == SchemaType.Swagger2 ? JsonObjectType.File : JsonObjectType.String,
+                            Format = _settings.SchemaType == SchemaType.Swagger2 ? null : JsonFormatStrings.Binary,
+                        }
+                    };
+                }
+            }
+        }
+
+        /// <summary>
+        /// Sets the IsNullableRaw property of parameters to null for OpenApi3 schemas.
+        /// </summary>
+        /// <param name="operationDescription">Operation to check.</param>
+        /// <param name="schemaType">Schema type.</param>
+        private void UpdateNullableRawOperationParameters(OpenApiOperationDescription operationDescription, SchemaType schemaType)
+        {
+            if (schemaType == SchemaType.OpenApi3)
+            {
+                foreach (OpenApiParameter openApiParameter in operationDescription.Operation.Parameters)
+                {
+                    openApiParameter.IsNullableRaw = null;
+                }
+            }
         }
 
         private void EnsureSingleBodyParameter(OpenApiOperationDescription operationDescription)
@@ -294,7 +355,8 @@ namespace NSwag.Generation.WebApi.Processors
             OpenApiParameter operationParameter;
 
             var typeDescription = _settings.ReflectionService.GetDescription(contextualParameter, _settings);
-            var isNullable = _settings.AllowNullableBodyParameters && typeDescription.IsNullable;
+            var isRequired = _settings.AllowNullableBodyParameters == false || contextualParameter.ContextAttributes.FirstAssignableToTypeNameOrDefault("RequiredAttribute", TypeNameStyle.Name) != null;
+            var isNullable = _settings.AllowNullableBodyParameters && (typeDescription.IsNullable && !isRequired);
 
             var operation = context.OperationDescription.Operation;
             if (contextualParameter.TypeName == "XmlDocument" || contextualParameter.Type.InheritsFromTypeName("XmlDocument", TypeNameStyle.Name))
@@ -310,7 +372,7 @@ namespace NSwag.Generation.WebApi.Processors
                         IsNullableRaw = isNullable
                     },
                     IsNullableRaw = isNullable,
-                    IsRequired = contextualParameter.ParameterInfo.HasDefaultValue == false,
+                    IsRequired = isRequired,
                     Description = contextualParameter.GetDescription()
                 };
                 operation.Parameters.Add(operationParameter);
@@ -325,11 +387,11 @@ namespace NSwag.Generation.WebApi.Processors
                     Schema = new JsonSchema
                     {
                         Type = JsonObjectType.String,
-                        Format = JsonFormatStrings.Byte,
+                        Format = JsonFormatStrings.Binary,
                         IsNullableRaw = isNullable
                     },
                     IsNullableRaw = isNullable,
-                    IsRequired = contextualParameter.ParameterInfo.HasDefaultValue == false,
+                    IsRequired = isRequired,
                     Description = contextualParameter.GetDescription()
                 };
                 operation.Parameters.Add(operationParameter);
@@ -340,7 +402,7 @@ namespace NSwag.Generation.WebApi.Processors
                 {
                     Name = name,
                     Kind = OpenApiParameterKind.Body,
-                    IsRequired = true, // FromBody parameters are always required
+                    IsRequired = isRequired,
                     IsNullableRaw = isNullable,
                     Description = contextualParameter.GetDescription(),
                     Schema = context.SchemaGenerator.GenerateWithReferenceAndNullability<JsonSchema>(

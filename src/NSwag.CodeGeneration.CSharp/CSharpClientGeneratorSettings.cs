@@ -24,7 +24,9 @@ namespace NSwag.CodeGeneration.CSharp
             WrapDtoExceptions = true;
             DisposeHttpClient = true;
             ParameterDateTimeFormat = "s";
+            ParameterDateFormat = "yyyy-MM-dd";
             GenerateUpdateJsonSerializerSettingsMethod = true;
+            UseRequestAndResponseSerializationSettings = false;
             QueryNullValue = "";
             GenerateBaseUrlProperty = true;
             ExposeJsonSerializerSettings = false;
@@ -34,6 +36,9 @@ namespace NSwag.CodeGeneration.CSharp
 
         /// <summary>Gets or sets the full name of the base class.</summary>
         public string ClientBaseClass { get; set; }
+
+        /// <summary>Gets or sets the full name of the base interface.</summary>
+        public string ClientBaseInterface { get; set; }
 
         /// <summary>Gets or sets the full name of the configuration class (<see cref="ClientBaseClass"/> must be set).</summary>
         public string ConfigurationClass { get; set; }
@@ -83,8 +88,21 @@ namespace NSwag.CodeGeneration.CSharp
         /// <summary>Gets or sets the format for DateTime type method parameters (default: "s").</summary>
         public string ParameterDateTimeFormat { get; set; }
 
+        /// <summary>Gets or sets the format for Date type method parameters (default: "yyyy-MM-dd").</summary>
+        public string ParameterDateFormat { get; set; }
+
         /// <summary>Gets or sets a value indicating whether to generate the UpdateJsonSerializerSettings method (must be implemented in the base class otherwise, default: true).</summary>
         public bool GenerateUpdateJsonSerializerSettingsMethod { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether to create PrepareRequest and ProcessResponse as async methods, or as partial synchronous methods.
+        /// If value is set to true, PrepareRequestAsync and ProcessResponseAsync methods must be implemented as part of the client base class (if it has one) or as part of the partial client class.
+        /// If value is set to false, PrepareRequest and ProcessResponse methods will be partial methods, and implement them is optional.
+        /// </summary>
+        public bool GeneratePrepareRequestAndProcessResponseAsAsyncMethods { get; set; }
+
+        /// <summary>Gets or sets a value indicating whether to generate different request and response serialization settings (default: false).</summary>
+        public bool UseRequestAndResponseSerializationSettings { get; set; }
 
         /// <summary>Gets or sets a value indicating whether to serialize the type information in a $type property (not recommended, also sets TypeNameHandling = Auto).</summary>
         public bool SerializeTypeInformation { get; set; }
